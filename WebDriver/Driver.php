@@ -294,9 +294,11 @@ class WebDriver_Driver {
   
   // See http://code.google.com/p/selenium/wiki/JsonWireProtocol#/session/:sessionId/timeouts/implicit_wait
   public function set_implicit_wait($milliseconds) {
+    $wait =WebDriver::$ImplicitWaitMS;
     WebDriver::$ImplicitWaitMS = $milliseconds;
     $payload = array("ms" => $milliseconds);
     $this->execute("POST", "/session/:sessionId/timeouts/implicit_wait", $payload);
+    return $wait;
   }
 
   // See http://code.google.com/p/selenium/wiki/JsonWireProtocol#/session/:sessionId/url
