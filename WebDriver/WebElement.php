@@ -1,6 +1,9 @@
 <?php
 
 class WebDriver_WebElement {
+    /**
+     * @var WebDriver_Driver
+     */
   private $driver;
   private $element_id;
   private $locator;
@@ -62,6 +65,11 @@ class WebDriver_WebElement {
     $next_element_id = WebDriver::GetJSONValue($response, "ELEMENT");
     return new WebDriver_WebElement($this->driver, $next_element_id, $locator);
   }
+
+    public function get_parent()
+    {
+        return $this->get_next_element('xpath=..');
+    }
   
   // See http://code.google.com/p/selenium/wiki/JsonWireProtocol#/session/:sessionId/element/:id/elements
   public function get_all_next_elements($locator) {
@@ -244,70 +252,104 @@ class WebDriver_WebElement {
    * Asserters
    */
 
-  public function assert_visible() {
-    PHPUnit_Framework_Assert::assertTrue($this->is_visible(), "Failed asserting that <{$this->locator}> is visible.");
+  public function assert_visible($message=null) {
+    PHPUnit_Framework_Assert::assertTrue($this->is_visible(), $message ?: "Failed asserting that <{$this->locator}> is visible.");
   }
   
-  public function assert_hidden() {
-    PHPUnit_Framework_Assert::assertFalse($this->is_visible(), "Failed asserting that <{$this->locator}> is hidden.");
+  public function assert_hidden($message=null) {
+      $wait = $this->driver->set_implicit_wait(0);
+      $visible = true;
+      for ($i = 0;$i<$wait; $i+=1000){
+          if (!$this->is_visible()){
+              $visible = false;
+              break;
+          }
+          sleep(1);
+      }
+      $this->driver->set_implicit_wait($wait);
+      PHPUnit_Framework_Assert::assertFalse($visible, $message ?: "Failed asserting that <{$this->locator}> is hidden.");
   }
 
-  public function assert_enabled() {
-    PHPUnit_Framework_Assert::assertTrue($this->is_enabled(), "Failed asserting that <{$this->locator}> is enabled.");
+  public function assert_enabled($message = null) {
+    PHPUnit_Framework_Assert::assertTrue($this->is_enabled(), $message ?:"Failed asserting that <{$this->locator}> is enabled.");
   }
   
-  public function assert_disabled() {
-    PHPUnit_Framework_Assert::assertFalse($this->is_enabled(), "Failed asserting that <{$this->locator}> is disabled.");
+  public function assert_disabled($message = null) {
+    PHPUnit_Framework_Assert::assertFalse($this->is_enabled(),$message ?: "Failed asserting that <{$this->locator}> is disabled.");
   }
   
-  public function assert_selected() {
-    PHPUnit_Framework_Assert::assertTrue($this->is_selected(), "Failed asserting that <{$this->locator}> is selected.");
+  public function assert_selected($message = null) {
+    PHPUnit_Framework_Assert::assertTrue($this->is_selected(),$message ?: "Failed asserting that <{$this->locator}> is selected.");
   }
   
-  public function assert_not_selected() {
-    PHPUnit_Framework_Assert::assertFalse($this->is_selected(), "Failed asserting that <{$this->locator}> is not selected.");
+  public function assert_not_selected($message = null) {
+    PHPUnit_Framework_Assert::assertFalse($this->is_selected(), $message ?: "Failed asserting that <{$this->locator}> is not selected.");
   }
   
-  public function assert_contains_element($child_locator) {
-    PHPUnit_Framework_Assert::assertTrue($this->contains_element($child_locator), "Failed asserting that <{$this->locator}> contains <$child_locator>.");
+  public function assert_contains_element($child_locator, $message = null) {
+    PHPUnit_Framework_Assert::assertTrue($this->contains_element($child_locator), $message ?: "Failed asserting that <{$this->locator}> contains <$child_locator>.");
   }
   
-  public function assert_does_not_contain_element($child_locator) {
-    PHPUnit_Framework_Assert::assertFalse($this->contains_element($child_locator), "Failed asserting that <{$this->locator}> does not contain <$child_locator>.");
+  public function assert_does_not_contain_element($child_locator, $message = null) {
+      $wait = $this->driver->set_implicit_wait(0);
+
+        $present = true;
+        for ($i=0;$i<=$wait;$i+=1000)
+        {
+            if (!$this->contains_element($child_locator)){
+                $present = false;
+                break;
+            }
+            sleep(1);
+        }
+        $this->driver->set_implicit_wait($wait);
+        PHPUnit_Framework_Assert::assertFalse($present,$message ?: "Failed asserting that <{$this->locator}> does not contain <$child_locator>.");
+
   }
   
-  public function assert_text($expected_text) {
+  public function assert_text($expected_text,$message = null) {
     $end_time = time() + WebDriver::$ImplicitWaitMS/1000;
     do {
       $actual_text = $this->get_text();
     } while (time() < $end_time && $actual_text != $expected_text);
-    PHPUnit_Framework_Assert::assertEquals($expected_text, $actual_text, "Failed asserting that <{$this->locator}>'s text is <$expected_text>.");
+    PHPUnit_Framework_Assert::assertEquals($expected_text, $actual_text, $message ?:"Failed asserting that <{$this->locator}>'s text is <$expected_text>.");
   }
   
-  public function assert_text_contains($expected_needle) {
+  public function assert_text_contains($expected_needle,$message = null) {
     $actual_haystack = $this->get_text();
-    PHPUnit_Framework_Assert::assertContains($expected_needle, $actual_haystack, "Failed asserting that <{$this->locator}>'s text contains <$expected_needle>.\n$actual_haystack");
+    PHPUnit_Framework_Assert::assertContains($expected_needle, $actual_haystack, $message ?:"Failed asserting that <{$this->locator}>'s text contains <$expected_needle>.\n$actual_haystack");
   }
 
-  public function assert_text_does_not_contain($expected_missing_needle) {
+  public function assert_text_does_not_contain($expected_missing_needle,$message = null) {
     $actual_haystack = $this->get_text();
-    PHPUnit_Framework_Assert::assertNotContains($expected_missing_needle, $actual_haystack, "Failed asserting that <{$this->locator}>'s text does not contain <$expected_missing_needle>.");
+    PHPUnit_Framework_Assert::assertNotContains($expected_missing_needle, $actual_haystack, $message ?:"Failed asserting that <{$this->locator}>'s text does not contain <$expected_missing_needle>.");
   }
 
-  public function assert_value($expected_value) {
-    $actual_value = $this->get_value();
-    PHPUnit_Framework_Assert::assertEquals($expected_value, $actual_value, "Failed asserting that <{$this->locator}>'s value is <$expected_value>.");
+  public function assert_value($expected_value,$message = null) {
+
+      $wait = $this->driver->set_implicit_wait(0);
+      $actual_value = $this->get_value();
+      for($i = 0; $i <= $wait; $i += 1000){
+          if ($actual_value == $expected_value)
+          {
+              break;
+          }
+          sleep(1);
+          $actual_value = $this->get_value();
+      }
+      $this->driver->set_implicit_wait($wait);
+      PHPUnit_Framework_Assert::assertEquals($actual_value,$expected_value, $message ?:"Failed asserting that <{$this->locator}>'s value is <$expected_value>.");
   }
-  
+
   // Will pass for "equivalent" CSS colors such as "#FFFFFF" and "white". Pass $canonicalize_colors = false to disable.
-  public function assert_css_value($property_name, $expected_value, $canonicalize_colors = true) {
+  public function assert_css_value($property_name, $expected_value, $canonicalize_colors = true,$message = null) {
     $actual_value = $this->get_css_value($property_name);
     if (strpos($property_name, 'color') !== false && $canonicalize_colors) {
       $canonical_expected = WebDriver::CanonicalizeCSSColor($expected_value);
       $canonical_actual = WebDriver::CanonicalizeCSSColor($actual_value);
-      PHPUnit_Framework_Assert::assertEquals($canonical_expected, $canonical_actual, "Failed asserting that <{$this->locator}>'s <{$property_name}> is <$canonical_expected> after canonicalization.\nExpected: $expected_value -> $canonical_expected\nActual: $actual_value -> $canonical_actual");
+      PHPUnit_Framework_Assert::assertEquals($canonical_expected, $canonical_actual,$message ?: "Failed asserting that <{$this->locator}>'s <{$property_name}> is <$canonical_expected> after canonicalization.\nExpected: $expected_value -> $canonical_expected\nActual: $actual_value -> $canonical_actual");
     } else {
-      PHPUnit_Framework_Assert::assertEquals($expected_value, $actual_value, "Failed asserting that <{$this->locator}>'s <{$property_name}> is <$expected_value>.");
+      PHPUnit_Framework_Assert::assertEquals($expected_value, $actual_value,$message ?: "Failed asserting that <{$this->locator}>'s <{$property_name}> is <$expected_value>.");
     }
   }
   
@@ -315,12 +357,12 @@ class WebDriver_WebElement {
    * Asserters for <select> elements
    */
   
-  public function assert_option_count($expected_count) {
+  public function assert_option_count($expected_count,$message = null) {
     $options = $this->get_options();
-    PHPUnit_Framework_Assert::assertEquals($expected_count, count($options), "Failed asserting that <{$this->locator}> contains $expected_count options.");
+    PHPUnit_Framework_Assert::assertEquals($expected_count, count($options), $message ?: "Failed asserting that <{$this->locator}> contains $expected_count options.");
   }
   
-  public function assert_contains_label($expected_label) {
+  public function assert_contains_label($expected_label,$message = null) {
     $contains_label = false;
     $options = $this->get_options();
     $labels = array();
@@ -332,6 +374,6 @@ class WebDriver_WebElement {
       }
       $labels[] = $actual_label;
     }
-    PHPUnit_Framework_Assert::assertTrue($contains_label, "Failed asserting that <{$this->locator}> contains label <$expected_label>.\n" . print_r($labels, true));
+    PHPUnit_Framework_Assert::assertTrue($contains_label,$message ?: "Failed asserting that <{$this->locator}> contains label <$expected_label>.\n" . print_r($labels, true));
   }
 }

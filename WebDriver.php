@@ -132,6 +132,10 @@ class WebDriver {
         $value = $locator;
       } else if (substr($locator, 0, 9) === "document." || substr($locator, 0, 4) === "dom=") {
         throw new Exception("DOM selectors aren't supported in WebDriver: $locator");
+      }
+      else if (substr($locator, 0, 1) === "#" || substr($locator, 0, 1) === "."){
+        $strategy = "css selector";
+        $value = $locator;
       } else { // Fall back to id
         $strategy = "id";
         $value = $locator;

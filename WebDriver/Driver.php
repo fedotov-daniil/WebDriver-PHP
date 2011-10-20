@@ -228,6 +228,21 @@ class WebDriver_Driver {
     }
     return $is_element_present;
   }
+
+    public function is_element_not_present($locator) {
+        $wait = $this->set_implicit_wait(0);
+        $present = true;
+        for ($i = 0; $i <= $wait; $i += 1000){
+            if (!$this->is_element_present($locator))
+            {
+                $present = false;
+                break;
+            }
+            sleep(1);
+        }
+        $this->set_implicit_wait($wait);
+        return !$present;
+    }
   
   // See http://code.google.com/p/selenium/wiki/JsonWireProtocol#/session/:sessionId/window_handle
   public function get_window_handle() {
